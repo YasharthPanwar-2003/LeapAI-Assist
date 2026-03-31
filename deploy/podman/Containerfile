@@ -33,9 +33,10 @@ RUN zypper -n install --no-recommends \
     && zypper clean -a
 
 # Install uv for fast Python dependency management
-RUN curl -LsSf https://astral.sh/uv/install.sh | CARGO_HOME=/opt/uv sh \
-    && mv /opt/uv/bin/uv /usr/local/bin/uv \
-    && mv /opt/uv/bin/uvx /usr/local/bin/uvx \
+# FIX: The uv installer now places binaries in /root/.local/bin instead of /opt
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && mv /root/.local/bin/uvx /usr/local/bin/uvx \
     && chmod +x /usr/local/bin/uv /usr/local/bin/uvx
 
 # ---------------------------------------------------------------------------
@@ -49,10 +50,11 @@ WORKDIR /build
 COPY requirements*.txt ./
 
 # Create virtual environment and install dependencies with uv
+# FIX: Added a space after 'if' (if[ -f ... ) to prevent bash syntax errors
 RUN uv venv /opt/venv \
     && . /opt/venv/bin/activate \
     && uv pip install --no-cache-dir -r requirements.txt \
-    && if[ -f requirements-dev.txt ]; then \
+    && if [ -f requirements-dev.txt ]; then \
          uv pip install --no-cache-dir -r requirements-dev.txt; \
        fi
 
