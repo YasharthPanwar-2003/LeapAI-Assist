@@ -599,16 +599,9 @@ systemctl is-enabled cockpit.socket && echo "Cockpit enabled"
 
 ---
 
-## 📊 MERMAID DIAGRAMS (Separate Files for PDF Rendering)
-
-### Create `diagrams.md` for PDF inclusion:
+## 📊 openSUSE AI layers
 
 ```markdown
-# Architecture Diagrams
-
-## Figure 1: Seven-Layer Architecture
-
-```mermaid
 flowchart TB
     subgraph "M1 Presentation"
         U1["Textual TUI<br/>~20 MB RAM"]
