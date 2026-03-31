@@ -51,10 +51,32 @@
 
 | Component | Model | Size | RAM | Purpose |
 |-----------|-------|------|-----|---------|
-| **Primary SLM** | LFM2.5-1.2B-Instruct Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands |
-| **Thinking Mode** | LFM2.5-1.2B-Thinking Q4_K_M | ~900 MB | ~900 MB | Complex reasoning |
-| **Embedding** | jina-v5-text-nano Q4_K_M | ~120 MB | ~120 MB | Vector RAG only |
-| **Upgrade Path** | Qwen3.5-0.8B/2B/4B GGUF | ~500MB-2.3GB | Variable | Better reasoning |
+
+| **Primary SLM** | LFM2.5-1.2B-Instruct Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands , works well on CPU and GPU ,  fast , preferred |
+| **Secondary (I) SLM** | LFM2-1.2B-RAG Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands , preferred  | 
+| **Secondary (II) SLM** | LFM2-700M-Q4_K_M | ~500 MB | ~500 MB | RAG Q&A, commands |
+| **Thinking Mode** | LFM2.5-1.2B-Thinking Q4_K_M | ~900 MB | ~900 MB | Complex reasoning , preferred|
+| **Upgrade Path** | Qwen3.5-0.8B Q4_K_M  | ~500MB | Variable | Better reasoning , Slow on resource constrainted environment , fall in thinking loop|
+
+### Embedding models — llama.cpp server, port 8081 (Vector RAG Only)
+
+| Model | Params | MTEB | Dims | Context | RAM (Q4) | GGUF | Best For |
+|-------|--------|------|------|---------|----------|------|----------|
+| **jina-v5-text-nano** (Feb 2026) | 239M | 71.0 | 768 | 8K | ~120 MB | ✅ | **PRIMARY — Best sub-500M** |
+| **jina-v5-text-small** (Feb 2026) | 677M | 71.7 | 1024 | 32K | ~340 MB | ✅ | Upgrade — Multilingual |
+| **pplx-embed-v1-0.6B** (Feb 2026) | 600M | ~72 | 1024 | 32K | ~300 MB | ⚠️ | Alternative — Diffusion-pretrained |
+| **pplx-embed-context-v1-0.6B** | 600M | ~72 | 1024 | 32K | ~300 MB | ⚠️ | RAG chunks with context |
+| **all-MiniLM-L6-v2** | 22M | ~56 | 384 | 512 | ~80 MB | ✅ | Ultra-low RAM fallback |
+| **all-MiniLM-L12-v2** | 33.4M | ~58 | 384 | 512 | ~130 MB | ✅ | Legacy fallback |
+| **BGE-small-en-v1.5** | 33M | ~62 | 384 | 512 | ~130 MB | ✅ | English-only retrieval |
+| **BGE-m3** | 568M | ~68 | 1024 | 8K | ~570 MB | ✅ | Heavy multilingual |
+| **E5-small-v2** | 33M | ~59 | 384 | 512 | ~130 MB | ✅ | Balanced legacy |
+
+**Notes:**
+- ✅ = GGUF available, runs on llama.cpp port 8081
+- ⚠️ = Requires SentenceTransformers or TEI (not native GGUF)
+- **PRIMARY recommendation:** jina-v5-text-nano (71.0 MTEB, ~120 MB, 8K context)
+- **Vectorless RAG:** Embedding model NEVER loaded — saves ~120 MB RAM
 
 ### RAM Budget (4 GB VM) 
 
