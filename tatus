@@ -1,5 +1,0 @@
-[33mb6a0c19[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: restructure project, add RAG backends, and setup pre-commit
-[33m70c11d8[m feat: initial project scaffolding
-[33mf956d0f[m Delete data directory
-[33m725ce81[m Delete src directory
-[33mdc61953[m Delete tests directory
