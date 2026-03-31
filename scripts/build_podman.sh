@@ -19,6 +19,8 @@ IMAGE_NAME="suse-ai"
 IMAGE_TAG="latest"
 NO_CACHE=""
 PUSH=false
+
+# Get absolute paths based on script location (scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -46,15 +48,15 @@ for arg in "$@"; do
     esac
 done
 
-# ─── Detect Engine ───────────────────────────────────────────────────────────
+# ─── Detect Engine & Paths ───────────────────────────────────────────────────
 if [[ "$ENGINE" == "podman" ]]; then
     if ! command -v podman &>/dev/null; then
         log_error "podman not found. Install: sudo zypper install -y podman"
         exit 1
     fi
-    # NOTE: Podman is DAEMONLESS — no need to check for a running daemon.
-    # There is no podman.service or podman.socket to start.
-    COMPOSE_CMD="podman compose"
+    # Set paths specific to podman
+    CONTAINERFILE="deploy/podman/Containerfile"
+    COMPOSE_CMD="podman compose -f deploy/podman/compose.yaml"
 else
     if ! command -v docker &>/dev/null; then
         log_error "docker not found. Install: sudo zypper install -y docker-ce"
@@ -64,7 +66,9 @@ else
         log_error "Docker daemon not running. Start: sudo systemctl start docker"
         exit 1
     fi
-    COMPOSE_CMD="docker compose"
+    # Set paths specific to docker
+    CONTAINERFILE="deploy/docker/Dockerfile"
+    COMPOSE_CMD="docker compose -f deploy/docker/docker-compose.yml"
 fi
 
 # ─── Pre-flight Checks ───────────────────────────────────────────────────────
@@ -76,11 +80,11 @@ else
     log_warn "python3.13 not found locally (OK if building inside container)"
 fi
 
-if [[ ! -f "${PROJECT_DIR}/Containerfile" ]]; then
-    log_error "Containerfile not found at ${PROJECT_DIR}/Containerfile"
+if [[ ! -f "${PROJECT_DIR}/${CONTAINERFILE}" ]]; then
+    log_error "Build file not found at ${PROJECT_DIR}/${CONTAINERFILE}"
     exit 1
 fi
-log_info "Containerfile: ${PROJECT_DIR}/Containerfile"
+log_info "Build file: ${PROJECT_DIR}/${CONTAINERFILE}"
 
 if [[ ! -f "${PROJECT_DIR}/requirements.txt" ]]; then
     log_error "requirements.txt not found at ${PROJECT_DIR}/requirements.txt"
@@ -92,6 +96,7 @@ log_info "requirements.txt: ${PROJECT_DIR}/requirements.txt"
 log_step "Building ${IMAGE_NAME}:${IMAGE_TAG} with ${ENGINE}..."
 log_info "Project directory: ${PROJECT_DIR}"
 
+# Move to the root project directory so the build context (.) includes all files (src/, requirements.txt, etc)
 cd "${PROJECT_DIR}"
 
 BUILD_START=$(date +%s)
@@ -99,7 +104,7 @@ BUILD_START=$(date +%s)
 ${ENGINE} build \
     -t "${IMAGE_NAME}:${IMAGE_TAG}" \
     -t "${IMAGE_NAME}:build-$(date +%Y%m%d)" \
-    -f Containerfile \
+    -f "${CONTAINERFILE}" \
     ${NO_CACHE} \
     .
 
@@ -133,7 +138,7 @@ IMAGE_SIZE=$(${ENGINE} image inspect "${IMAGE_NAME}:${IMAGE_TAG}" \
 echo "  Image: ${ENGINE}://${IMAGE_NAME}:${IMAGE_TAG}"
 echo "  Size:  ${IMAGE_SIZE}"
 echo ""
-echo "  Run with ${ENGINE}:"
+echo "  Run with ${ENGINE} Compose:"
 echo "    ${COMPOSE_CMD} up -d"
 echo ""
 echo "  Or directly:"
