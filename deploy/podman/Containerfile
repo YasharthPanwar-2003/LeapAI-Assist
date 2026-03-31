@@ -2,20 +2,20 @@
 # SUSE AI Application — Production Containerfile for Podman on Leap 16
 # =============================================================================
 # 3-stage build: builder → python-deps → runtime
-# Base: opensuse/leap:16 | Python: 3.13 | Package manager: uv
+# Base: registry.opensuse.org/opensuse/leap:16.0 | Python: 3.13 | Package manager: uv
 # Build: podman build -t localhost/suse-ai:latest -f Containerfile .
 # =============================================================================
 
 # ---------------------------------------------------------------------------
 # STAGE 1: Builder — compile-time dependencies and system packages
 # ---------------------------------------------------------------------------
-FROM opensuse/leap:16 AS builder
+FROM registry.opensuse.org/opensuse/leap:16.0 AS builder
 
 LABEL maintainer="suse-ai-team" \
       org.opencontainers.image.title="SUSE AI Builder" \
       org.opencontainers.image.description="Build stage for SUSE AI application" \
       org.opencontainers.image.vendor="SUSE" \
-      io.opensuse.leap.version="16"
+      io.opensuse.leap.version="16.0"
 
 # Install build dependencies (caching friendly — system packages change rarely)
 RUN zypper -n install --no-recommends \
@@ -45,27 +45,28 @@ FROM builder AS python-deps
 
 WORKDIR /build
 
-# Copy dependency manifests first (layer caching — rebuilds only when deps change)
-COPY requirements.txt requirements-dev.txt ./
+# Copy dependency manifests safely using wildcards (won't crash if -dev doesn't exist)
+COPY requirements*.txt ./
 
 # Create virtual environment and install dependencies with uv
 RUN uv venv /opt/venv \
     && . /opt/venv/bin/activate \
     && uv pip install --no-cache-dir -r requirements.txt \
-    && if [ -f requirements-dev.txt ]; then \
+    && if[ -f requirements-dev.txt ]; then \
          uv pip install --no-cache-dir -r requirements-dev.txt; \
        fi
 
-# Install the application package itself (if setup.py/pyproject.toml exists)
-COPY pyproject.toml setup.py setup.cfg ./
+# Install the application package normally (NOT editable/-e)
+# We copy setup files using a glob hack so it doesn't fail if they don't exist
+COPY pyproject.toml setup.p[y] setup.cf[g] ./
 COPY src/ ./src/
 RUN . /opt/venv/bin/activate \
-    && uv pip install --no-cache-dir --no-deps -e .
+    && uv pip install --no-cache-dir --no-deps .
 
 # ---------------------------------------------------------------------------
 # STAGE 3: Runtime — minimal production image
 # ---------------------------------------------------------------------------
-FROM opensuse/leap:16 AS runtime
+FROM registry.opensuse.org/opensuse/leap:16.0 AS runtime
 
 LABEL maintainer="suse-ai-team" \
       org.opencontainers.image.title="SUSE AI Application" \
@@ -73,29 +74,30 @@ LABEL maintainer="suse-ai-team" \
       org.opencontainers.image.vendor="SUSE" \
       org.opencontainers.image.source="https://github.com/suse/suse-ai" \
       org.opencontainers.image.version="1.0.0" \
-      io.opensuse.leap.version="16" \
+      io.opensuse.leap.version="16.0" \
       io.podman.version="5.4.2"
 
 # Install only runtime dependencies
 RUN zypper -n install --no-recommends \
         python313 \
-        python313-pip \
         curl \
         ca-certificates \
         timezone \
     && zypper clean -a \
     && rm -rf /var/cache/zypp/* /usr/share/doc/packages/*
 
-# Create non-root user for security
+# Create non-root user, setup directories, and grant broad permissions
+# to support Podman's `userns_mode: keep-id` seamless volume mounts.
 RUN groupadd -r suseai -g 1000 \
     && useradd -r -g suseai -u 1000 -d /app -s /usr/sbin/nologin suseai \
     && mkdir -p /app /data /run/suseai \
-    && chown -R suseai:suseai /app /data /run/suseai
+    && chown -R suseai:suseai /app /data /run/suseai \
+    && chmod 777 /data /run/suseai
 
 WORKDIR /app
 
 # Copy virtual environment from builder stage
-COPY --from=python-deps /opt/venv /opt/venv
+COPY --from=python-deps --chown=suseai:suseai /opt/venv /opt/venv
 
 # Set PATH to include venv binaries
 ENV PATH="/opt/venv/bin:${PATH}" \
@@ -107,12 +109,6 @@ ENV PATH="/opt/venv/bin:${PATH}" \
 
 # Copy application code
 COPY --chown=suseai:suseai . /app/
-
-# Install application (pure Python bytecode — fast in production)
-RUN pip install --no-cache-dir --no-deps -e .
-
-# Create data directory with proper permissions
-RUN mkdir -p /data && chown suseai:suseai /data
 
 # Switch to non-root user
 USER suseai

@@ -1,8 +1,8 @@
 # openSUSE AI Assistant
 
-**Version:** 1.0 (March 2026)  
-**Architecture:** v1.0 (11 Sections)  
-**Licence:** MIT (code), Apache 2.0 (dependencies)  
+**Version:** 1.0 (March 2026)
+**Architecture:** v1.0 (11 Sections)
+**Licence:** MIT (code), Apache 2.0 (dependencies)
 
 ---
 
@@ -14,12 +14,12 @@
 
 | Feature | Description | Architecture Section |
 |---------|-------------|---------------------|
-| **100% Local Inference** | No data leaves the machine — air-gapped capable | 
+| **100% Local Inference** | No data leaves the machine — air-gapped capable |
 | **Vectorless RAG (PageIndex)** | ~10 MB RAM, 98.7% accuracy on structured docs |
-| **Plug-and-Play Architecture** | Swap RAG backends, models, UI via config.yaml | 
-| **Podman Rootless** | No root privileges, systemd user services | 
+| **Plug-and-Play Architecture** | Swap RAG backends, models, UI via config.yaml |
+| **Podman Rootless** | No root privileges, systemd user services |
 | **Version-Aware** | YaST (Leap 15.x) vs Cockpit/Agama (Leap 16+) |
-| **KV Cache Optimization** | 60-70% efficiency gain per query turn | 
+| **KV Cache Optimization** | 60-70% efficiency gain per query turn |
 | **~1.1 GB RAM Total** | Runs on 4 GB VM with ~530 MB headroom |
 
 ---
@@ -41,19 +41,19 @@
 
 ## 🏗️ System Architecture
 
-### Seven-Layer Architecture 
+### Seven-Layer Architecture
 
 ```
 
 ```
 
-### Model Zoo (March 2026) 
+### Model Zoo (March 2026)
 
 | Component | Model | Size | RAM | Purpose |
 |-----------|-------|------|-----|---------|
 
 | **Primary SLM** | LFM2.5-1.2B-Instruct Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands , works well on CPU and GPU ,  fast , preferred |
-| **Secondary (I) SLM** | LFM2-1.2B-RAG Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands , preferred  | 
+| **Secondary (I) SLM** | LFM2-1.2B-RAG Q4_K_M | ~900 MB | ~900 MB | RAG Q&A, commands , preferred  |
 | **Secondary (II) SLM** | LFM2-700M-Q4_K_M | ~500 MB | ~500 MB | RAG Q&A, commands |
 | **Thinking Mode** | LFM2.5-1.2B-Thinking Q4_K_M | ~900 MB | ~900 MB | Complex reasoning , preferred|
 | **Upgrade Path** | Qwen3.5-0.8B Q4_K_M  | ~500MB | Variable | Better reasoning , Slow on resource constrainted environment , fall in thinking loop|
@@ -78,7 +78,7 @@
 - **PRIMARY recommendation:** jina-v5-text-nano (71.0 MTEB, ~120 MB, 8K context)
 - **Vectorless RAG:** Embedding model NEVER loaded — saves ~120 MB RAM
 
-### RAM Budget (4 GB VM) 
+### RAM Budget (4 GB VM)
 
 ```
 LFM2.5-1.2B:     900 MB
@@ -189,7 +189,7 @@ huggingface-cli download LiquidAI/LFM2.5-1.2B-Instruct-GGUF \
     --local-dir-use-symlinks false
 ```
 
-### Step 4: Build Podman Image 
+### Step 4: Build Podman Image
 
 ```bash
 ./scripts/build_podman.sh
@@ -229,7 +229,7 @@ podman run -d --pod suse-ai-pod --name app \
     python3 -m src.ui.textual_tui
 ```
 
-### Step 6: Enable systemd Service 
+### Step 6: Enable systemd Service
 ```bash
 # Generate systemd unit
 cd ~/.config/systemd/user/
@@ -271,7 +271,7 @@ journalctl --user -u pod-suse-ai-pod.service -f
 nano /var/lib/suse-ai/state/config.yaml
 ```
 
-### Vectorless RAG (Default, Recommended) 
+### Vectorless RAG (Default, Recommended)
 
 ```yaml
 rag_backend: vectorless
@@ -282,7 +282,7 @@ temperature: 0.3
 max_tokens: 512
 ```
 
-### Vector RAG (Upgrade Path) 
+### Vector RAG (Upgrade Path)
 
 ```yaml
 rag_backend: vector
@@ -297,7 +297,7 @@ top_k: 5
 systemctl --user restart pod-suse-ai-pod.service
 ```
 
-### Change Model 
+### Change Model
 
 ```yaml
 # Upgrade to Qwen3.5-0.8B (same RAM, longer context)
@@ -316,7 +316,7 @@ huggingface-cli download unsloth/Qwen3.5-0.8B-GGUF \
 
 ## 💻 Usage
 
-### Textual TUI Commands 
+### Textual TUI Commands
 
 | Key Binding | Action |
 |-------------|--------|
@@ -341,7 +341,7 @@ huggingface-cli download unsloth/Qwen3.5-0.8B-GGUF \
 "How do I configure the firewall?"
 ```
 
-### Version-Specific Responses 
+### Version-Specific Responses
 
 | Leap Version | Management Tool | Example Response |
 |--------------|-----------------|------------------|
@@ -355,61 +355,61 @@ huggingface-cli download unsloth/Qwen3.5-0.8B-GGUF \
 ```
 opensuse-ai-assistant/
 ├── config/
-│   └── config.yaml                      # Main configuration 
+│   └── config.yaml                      # Main configuration
 ├── data/
-│   ├── cache/docs/                      # Markdown cache 
-│   ├── index/                           # PageIndex JSON trees 
-│   ├── models/                          # GGUF model files 
+│   ├── cache/docs/                      # Markdown cache
+│   ├── index/                           # PageIndex JSON trees
+│   ├── models/                          # GGUF model files
 │   └── state/                           # config.yaml + SQLite
 ├── deploy/
-│   ├── cockpit/suse-ai/                 # Cockpit extension Leap 16+ 
-│   ├── compose.yaml                     # Podman pod composition 
-│   ├── Containerfile                    # Multi-stage build 
-│   ├── jeos-firstboot/04_ai_assistant.sh # First-boot module 
+│   ├── cockpit/suse-ai/                 # Cockpit extension Leap 16+
+│   ├── compose.yaml                     # Podman pod composition
+│   ├── Containerfile                    # Multi-stage build
+│   ├── jeos-firstboot/04_ai_assistant.sh # First-boot module
 │   ├── kubernetes/                      # K8s deployment files
-│   ├── podman/                          # Podman systemd units 
-│   ├── rancher/                         # Rancher Fleet integration 
-│   └── systemd/                         # systemd user services 
+│   ├── podman/                          # Podman systemd units
+│   ├── rancher/                         # Rancher Fleet integration
+│   └── systemd/                         # systemd user services
 ├── docs/                                # Documentation
 ├── scripts/
 │   ├── setup_directories.sh             # Create /var/lib/suse-ai/
-│   ├── download_models.sh               # huggingface-cli download 
-│   ├── build_podman.sh                  # Podman build + pod create 
-│   ├── test_llm_connectivity.sh         # API endpoint tests 
-│   └── run_firstboot_test.sh            # jeos-firstboot simulation 
+│   ├── download_models.sh               # huggingface-cli download
+│   ├── build_podman.sh                  # Podman build + pod create
+│   ├── test_llm_connectivity.sh         # API endpoint tests
+│   └── run_firstboot_test.sh            # jeos-firstboot simulation
 ├── src/
-│   ├── caching/                         # Semantic cache layer 
+│   ├── caching/                         # Semantic cache layer
 │   ├── core/
 │   │   ├── config_loader.py             # YAML config loading
 │   │   ├── interfaces/                  # Plug-and-play contracts
-│   │   └── orchestrator.py              # Query router + 5-zone prompt 
+│   │   └── orchestrator.py              # Query router + 5-zone prompt
 │   ├── inference/
-│   │   └── llama_client.py              # HTTP client for llama.cpp 
+│   │   └── llama_client.py              # HTTP client for llama.cpp
 │   ├── ingestion/
-│   │   ├── crawl4ai_ingester.py         # HTML→Markdown 
-│   │   ├── man_extractor.py             # Local man pages 
-│   │   └── zypper_extractor.py          # System state probe 
+│   │   ├── crawl4ai_ingester.py         # HTML→Markdown
+│   │   ├── man_extractor.py             # Local man pages
+│   │   └── zypper_extractor.py          # System state probe
 │   ├── logger/
 │   │   └── logger.py                    # Centralized logging
 │   ├── os_integration/
-│   │   ├── version_detector.py          # YaST vs Agama 
-│   │   └── system_context.py            # Live system state 
+│   │   ├── version_detector.py          # YaST vs Agama
+│   │   └── system_context.py            # Live system state
 │   ├── rag/
 │   │   ├── vectorless/                  # PageIndex Vectorless RAG
 │   │   │   ├── backend.py
 │   │   │   ├── tree_builder.py
 │   │   │   ├── tree_searcher.py
 │   │   │   └── page_fetcher.py
-│   │   └── vector/                      # Vector RAG placeholder 
+│   │   └── vector/                      # Vector RAG placeholder
 │   └── ui/
-│       ├── textual_tui.py               # Main TUI app 
+│       ├── textual_tui.py               # Main TUI app
 │       └── widgets/
-│           ├── chat_panel.py            # Streaming chat 
-│           ├── status_bar.py            # Token budget display 
-│           └── onboarding_panel.py      # First-boot topics 
+│           ├── chat_panel.py            # Streaming chat
+│           ├── status_bar.py            # Token budget display
+│           └── onboarding_panel.py      # First-boot topics
 ├── tests/
 │   ├── test_week1.py                    # Week 1 foundation tests
-│   └── test_vectorless_rag.py           # Vectorless RAG tests 
+│   └── test_vectorless_rag.py           # Vectorless RAG tests
 ├── LICENSE
 ├── pyproject.toml
 ├── README.md
@@ -420,7 +420,7 @@ opensuse-ai-assistant/
 
 ## 🚢 Deployment Options
 
-### 1. Podman Rootless (Default) 
+### 1. Podman Rootless (Default)
 
 ```bash
 cd deploy/podman/
@@ -435,7 +435,7 @@ cd deploy/docker/
 docker-compose up -d
 ```
 
-### 3. Kubernetes 
+### 3. Kubernetes
 
 ```bash
 cd deploy/kubernetes/
@@ -451,14 +451,14 @@ sudo cp -r deploy/cockpit/suse-ai /usr/share/cockpit/
 # Access: http://localhost:9090/suse-ai/
 ```
 
-### 5. jeos-firstboot (First-Boot) 
+### 5. jeos-firstboot (First-Boot)
 
 ```bash
 sudo cp deploy/jeos-firstboot/04_ai_assistant.sh /var/lib/jeos-firstboot/modules/
 # Runs automatically on first reboot after installation
 ```
 
-### 6. Rancher Fleet (Multi-Cluster) 
+### 6. Rancher Fleet (Multi-Cluster)
 
 ```bash
 cd deploy/rancher/
@@ -530,7 +530,7 @@ pytest tests/ -v --cov=src --cov-report=term-missing
 | **systemd service not starting** | `systemctl --user daemon-reload` then `systemctl --user restart pod-suse-ai-pod.service` |
 | **Model download fails** | `huggingface-cli login` then retry download |
 
-### Debug Commands 
+### Debug Commands
 
 ```bash
 # Check pod status
@@ -636,29 +636,29 @@ flowchart TB
     subgraph "M1 Presentation"
         U1["Textual TUI<br/>~20 MB RAM"]
     end
-    
+
     subgraph "M2 Orchestration"
         O1["Query Router<br/>5-Zone Prompt"]
     end
-    
+
     subgraph "M3 RAG"
         R1["Vectorless<br/>PageIndex ~10 MB"]
         R2["Vector<br/>Qdrant ~200 MB"]
     end
-    
+
     subgraph "M4 Ingestion"
         I1["Crawl4AI<br/>~50 MB"]
         I2["man pages<br/>~0 MB"]
     end
-    
+
     subgraph "M5 Inference"
         L1["llama.cpp<br/>LFM2.5-1.2B ~900 MB"]
     end
-    
+
     subgraph "M6 OS Integration"
         M1["systemd units<br/>YaST/Agama probe"]
     end
-    
+
     subgraph "M7 Storage"
         S1["/var/lib/suse-ai/<br/>models, index, cache"]
     end
@@ -693,24 +693,24 @@ sequenceDiagram
     participant R as RAG Backend
     participant L as llama.cpp
     participant S as Storage
-    
+
     U->>O: 1. User query
     O->>O: 2. Session manager
     O->>S: 3. OS context probe
     O->>R: 4. Query router
-    
+
     alt Vectorless
         R->>S: 4a. PageIndex tree search
     else Vector
         R->>S: 4b. Qdrant cosine search
     end
-    
+
     R-->>O: Retrieved chunks
     O->>O: 5. 5-zone prompt assembly
     O->>L: 6. POST /v1/chat/completions
     L-->>O: 7. Stream tokens
     O->>U: 8. Response + cache
-    
+
     Note over O,L: KV cache 60-70% efficiency
 ```
 ```

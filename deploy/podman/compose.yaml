@@ -6,50 +6,27 @@
 #   podman compose up -d --build             rebuild images first
 #   podman compose --profile embeddings up -d  also start embed service
 #   podman compose logs -f                   live logs (all services)
-#   podman compose logs -f app               live logs (one service)
-#   podman compose ps                        show running services
-#   podman compose down                      stop and remove containers
-#   podman compose down -v                   also remove volumes
-#
-# 2026 FIXES APPLIED:
-#   - container_name: removed from all services (interferes with predictable
-#     name generation in Podman; use "podman compose exec <service>" instead)
-#   - userns_mode: keep-id added to ALL services (was missing from embed).
-#     Required for rootless file ownership on bind-mounted volumes — without
-#     it containers run as UID 100000+ on the host causing permission errors.
-#   - app.depends_on.embed uses condition: service_started (embed is
-#     optional/profile-gated; service_healthy would block startup when
-#     embed is not running)
 #
 # NOTES for Podman 5.x on openSUSE Leap 16:
 #   - container_name: NOT recommended (Podman generates predictable names)
 #   - userns_mode: keep-id maps your UID into the container (rootless must-have)
 #   - Volume mounts need :z (SELinux shared label) — required on Leap 16
-#   - restart: unless-stopped is supported by podman compose 4.x+
-#   - Use "podman compose" NOT "docker-compose" or "podman-compose"
-#   - Podman is DAEMONLESS — there is no podman.service or podman.socket
-#   - deploy.resources (memory/cpu limits) supported by podman compose
 # =============================================================================
 
 services:
 
   # ---------------------------------------------------------------------------
-  # LLM Service — Ollama inference engine (OpenAI-compatible API on port 11434)
+  # LLM Service
   # ---------------------------------------------------------------------------
   llm:
     image: docker.io/ollama/ollama:latest
-    # container_name: NOT set — Podman generates predictable names like
-    # <project>_llm_1. Use "podman compose exec llm bash" to get a shell.
     volumes:
-      - llm-models:/root/.ollama:z   # :z = SELinux shared label (required on Leap 16)
+      - llm-models:/root/.ollama:z
     ports:
       - "11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
-    # keep-id maps your host UID (e.g. 1000) into the container.
-    # Without this, rootless containers run as UID 0 inside but UID 100000+
-    # on the host, causing permission errors on bind-mounted files.
     userns_mode: keep-id
     deploy:
       resources:
@@ -63,12 +40,12 @@ services:
       test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
-      start_period: 120s   # Ollama needs time to load models on first start
+      start_period: 120s
       retries: 3
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
-  # Application Service — SUSE AI backend / TUI
+  # Application Service
   # ---------------------------------------------------------------------------
   app:
     build:
@@ -79,10 +56,10 @@ services:
     volumes:
       - app-data:/data:z
       - app-config:/app/config:z
-      - ./logs:/app/logs:z
+      - app-logs:/app/logs:z   # FIX: Named volume prevents root-ownership bugs
     environment:
       - PODMAN_USERNS=keep-id
-      - LLM_BASE_URL=http://llm:11434       # 'llm' resolves via shared pod network
+      - LLM_BASE_URL=http://llm:11434
       - EMBED_BASE_URL=http://embed:11435
       - APP_HOST=0.0.0.0
       - APP_PORT=8090
@@ -91,11 +68,6 @@ services:
     depends_on:
       llm:
         condition: service_healthy
-      embed:
-        # Use service_started (not service_healthy) because the embed service
-        # is profile-gated. When the 'embeddings' profile is not active, embed
-        # is not started at all — service_healthy would block app forever.
-        condition: service_started
     deploy:
       resources:
         limits:
@@ -113,13 +85,12 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
-  # Embedding Service — Optional, activate with --profile embeddings
-  #   podman compose --profile embeddings up -d
+  # Embedding Service — Optional
   # ---------------------------------------------------------------------------
   embed:
     image: docker.io/ollama/ollama:latest
     profiles:
-      - embeddings             # Not started by default — opt-in only
+      - embeddings
     volumes:
       - embed-models:/root/.ollama:z
     ports:
@@ -127,11 +98,7 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
-    # userns_mode must be set here too — was missing in original, causing
-    # ownership errors when embed writes model files to embed-models volume.
     userns_mode: keep-id
-    # Shell wrapper: start ollama, wait for it to be ready, pull the
-    # embedding model, then block (wait) to keep the container alive.
     entrypoint:
       - "/bin/sh"
       - "-c"
@@ -152,13 +119,12 @@ services:
       test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
-      start_period: 180s     # Model pull can take several minutes on first start
+      start_period: 180s
       retries: 3
     restart: unless-stopped
 
 # =============================================================================
-# Volumes — named volumes persist across 'podman compose down' restarts.
-# Remove them permanently with: podman compose down -v
+# Volumes
 # =============================================================================
 volumes:
   llm-models:
@@ -167,13 +133,11 @@ volumes:
     driver: local
   app-config:
     driver: local
+  app-logs:
+    driver: local
   embed-models:
     driver: local
 
-# =============================================================================
-# Networks — default bridge network is created automatically by podman compose.
-# Add extra networks here if you need service isolation.
-# =============================================================================
 networks:
   default:
     driver: bridge
